@@ -209,4 +209,4 @@ def trainModel():
 def getLog():
     return {'action': 'model/get', 'msg': 'ok', 'result': performances}
 
-run(host='localhost', port=8080, quiet=True, debug=True)
+run(host='localhost', port=8090, quiet=True, debug=True)
