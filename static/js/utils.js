@@ -1,4 +1,4 @@
-var baseUrl = "http://localhost:8090";
+var baseUrl = "http://dbp2.apt.ri.cmu.edu:8090";
 
 // call this function for GET services
 function get(url) {
