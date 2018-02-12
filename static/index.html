@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<header>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+
+    <!-- Materialize -->
+    <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/js/materialize.min.js"></script>
+
+    <!-- Note: timeline uses d3.time.format.multi, which is deprecated in v4 and onward -->
+    <script src="http://d3js.org/d3.v4.min.js" charset="utf-8"></script>
+    <script src="js/d3-timeline.js"></script>
+
+    <script src="js/utils.js"></script>
+    <link rel="import" href="features.html">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/modal.css">
+</header>
+
+<body>
+    <!-- header -->
+    <div class="header">
+        <div class="adjust-icon-wrapper modal-trigger" href="#intro-box">
+            <svg class="adjust-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 19 19">
+                <defs>
+                    <style>
+                        .cls-1 {
+                            fill: #fff;
+                            stroke: #000;
+                            stroke-miterlimit: 10;
+                        }
+                    </style>
+                </defs>
+                <title>cw_02_Asset 2</title>
+                <g id="Layer_2" data-name="Layer 2">
+                    <g id="Layer_4" data-name="Layer 4">
+                        <line class="cls-1" y1="2.5" x2="19" y2="2.5" />
+                        <line class="cls-1" y1="9.5" x2="19" y2="9.5" />
+                        <line class="cls-1" y1="16.5" x2="19" y2="16.5" />
+                        <circle class="cls-1" cx="4.17" cy="2.5" r="2" />
+                        <circle class="cls-1" cx="13.17" cy="9.5" r="2" />
+                        <circle class="cls-1" cx="4.17" cy="16.5" r="2" />
+                    </g>
+                </g>
+            </svg>
+        </div>
+        <a>
+            <div id="reset" class="adjust-controls">Reset</div>
+        </a>
+
+        <h1 class="page-title">
+            <a href="#" onclick="updatepage(1)" class="breadcrumb">Predictive Concepts</a>
+            <a href="#" onclick="updatepage(2)" class="breadcrumb">Case Studies</a>
+            <a href="#" onclick="updatepage(3)" class="breadcrumb">Teaching Effects</a>
+        </h1>
+
+    </div>
+
+    <div id="insert-content" class="content-wrapper"></div>
+
+    <!-- modal -->
+    <div id="intro-box" class="bookmark-modal">
+        <div class="modal-content">
+            <p>
+                You have a bookmark saved at Chapter
+                <span id="bookmark-location"></span>.
+            </p>
+        </div>
+        <div class="btn-container group">
+            <div id="bookmark-go" class="on-btn btn bookmark-go modal-close">OK</div>
+            <div id="bookmark-stay" class="off-btn btn bookmark-stay modal-close">Stay Here</div>
+        </div>
+    </div>
+
+</body>
+<script src="js/init.js"></script>
+<script src="js/featuring.js"></script>
+<script src="js/cases.js"></script>
+<script type="text/javascript">
+    function updatepage(page = 1) {
+        _this_row_index = 0;
+
+        // takes page number (defaul = 1)
+        // reloads the main body of the webpage
+
+        if (page == 1) {
+            $('#insert-content').load('features.html', function () {
+
+                init_materialize();
+                // check active features
+                get('/api/features/list').then(function (f) {
+                    pop_feature_list(f.result);
+                    update_features(f.result);
+                })
+            });
+        } else if (page == 2) {
+            $('#insert-content').load('cases.html', function () {
+                init_materialize();
+
+                // load patient cases
+                $('#test1').load('case-sheet.html', function () {
+
+                    // load d3.timeline
+                    var rectAndCircleTestData = [{
+                        label: "Dx", // row 1
+                        color: "#1f77b4",
+                        times: [{
+                            //"label": "STEMI",
+                            //"label": "1",
+                            "starting_time": 1328083200000, // 02/01/2012
+                            "display": "circle"
+                        }, {
+                            //"label": "HFrEF Dx",
+                            //"label": "2",
+                            "starting_time": 1330588800000, // 03/01/2012
+                            "display": "circle"
+                        }, {
+                            //"label": "NYHA ClassII",
+                            //"label": "3",
+                            "starting_time": 1338537600000, // 06/01/2012
+                            "display": "circle"
+                        }, {
+                            //"label": "CPT Upgrade",
+                            //"label": "4",
+                            "starting_time": 1417420800000, // 11/31/2014
+                            "display": "circle"
+                        }, {
+                            //"label": "Initiate PCS",
+                            //"label": "5",
+                            "starting_time": 1448956800000, // 11/31/2015
+                            "display": "circle"
+                        },]
+                    }, {
+                        label: "HF Adm",
+                        times: [{
+                            "starting_time": 1412150400000, // 10/01/2014
+                            "ending_time": 1413792000000 // 10/20/2014
+                        }, {
+                            "starting_time": 1422777600000, // 02/01/2015
+                            "ending_time": 1424419200000 // 02/20/2015
+                        }, {
+                            "starting_time": 1433145600000, // 06/01/2015
+                            "ending_time": 1434787200000 // 06/20/2015
+                        }, {
+                            "starting_time": 1464768000000, // 06/01/2016
+                            "ending_time": 1467360000000 // 07/01/2016
+                        }, {
+                            // "label": "Referred for MCS",
+                            "starting_time": 1487145600000, // 02/15/2017
+                            "ending_time": 1488268800000 // 02/28/2017
+                        }]
+
+                    },];
+
+
+                    var width = $('#svgcontainer').width();
+                    function timelineRectAndCircle() {
+                        var chart = d3.timeline()
+                            .stack() // toggles graph stacking
+                            .margin({
+                                left: 70,
+                                right: 30,
+                                top: 0,
+                                bottom: 0
+                            });
+                        var svg = d3.select("#timeline2_combine").append("svg").attr("width", width)
+                            .datum(rectAndCircleTestData).call(chart);
+                    }
+
+                    timelineRectAndCircle();
+
+                    // display rest of the patient sheet
+                    update_case(_this_row_index);
+
+                    // make buttons clickable : prev, next, choose/unchoose test case
+                    document.getElementById('up-page-icon').addEventListener('click', function (event) {
+                        _this_row_index -= 1;
+                        console.log("page up, now", _this_row_index);
+                        update_case(_this_row_index);
+                    });
+                    document.getElementById('down-page-icon').addEventListener('click', function (event) {
+                        _this_row_index += 1;
+                        console.log("page down, now", _this_row_index);
+                        update_case(_this_row_index);
+                    });
+
+                    document.getElementById('mod-test').addEventListener('click', function (event) {
+                        console.log("change test case");
+                        flip_test_select(_this_row_index);
+                        display_test_select(_this_row_index);
+                    });
+
+                });
+            });
+        } else if (page == 3) {
+            $('#insert-content').load('results.html', function () {
+                init_materialize();
+            });
+        };
+
+        $('.bookmark-modal').modal();
+    }
+
+    $(document).ready(function (e) {
+        updatepage();
+    });
+
+</script>
+
+</html>

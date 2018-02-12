@@ -1,0 +1,352 @@
+<!-- <h4 class="blockquote">P#100</h4> -->
+
+<div class="case-sheet-container">
+    <svg id="bookmark-icon" class="bookmark-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24.25 34">
+        <title>bookmark_2</title>
+        <g id="Layer_2" data-name="Layer 2">
+            <g id="Layer_2-2" data-name="Layer 2">
+                <polygon points="23.63 32.63 12.13 22.63 0.63 32.63 0.63 0.63 23.63 0.63 23.63 32.63" style="fill:#fff;stroke:#000;stroke-miterlimit:10;stroke-width:1.25px"
+                />
+            </g>
+        </g>
+    </svg>
+
+    <div id="up-page-icon" class="page-icon-wrapper">
+        <svg class="page-icon" style="width:50px;height:50px">
+            <path fill="#000000" d="M13,20H11V8L5.5,13.5L4.08,12.08L12,4.16L19.92,12.08L18.5,13.5L13,8V20Z" />
+        </svg>
+    </div>
+    <div id="down-page-icon" class="page-icon-wrapper">
+        <svg class="page-icon" style="width:50px;height:50px">
+            <path fill="#000000" d="M11,4H13V16L18.5,10.5L19.92,11.92L12,19.84L4.08,11.92L5.5,10.5L11,16V4Z" />
+        </svg>
+    </div>
+    <div id="list-page-icon" class="page-icon-wrapper">
+        <svg class="page-icon" style="width:50px;height:50px">
+                <path fill="#000000" d="M9,5V9H21V5M9,19H21V15H9M9,14H21V10H9M4,9H8V5H4M4,19H8V15H4M4,14H8V10H4V14Z" />
+            </svg>
+        </div>
+
+    <div class="offset-by-one three columns" id="info">
+        <a class="session-label">Basic Info</a>
+        <div class="one-col-table">
+            <table class="case-sheet-table">
+                <tbody>
+                    <tr>
+                        <td>OUT-PT</td>
+                        <td id="AGE_GENDER"></td>
+                        <td id="BLOOD_TYPE"></td>
+                        <td id="BMI">BMI </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- overview -->
+        <div class="table-grid" style="margin-bottom: 5%">
+            <div class="row">
+                <div class="twelve columns label">Prm Dx</div>
+                <div class="twelve columns">
+                    <a id="PRIMARY_DGN">Non-ischemic Cardiomyopathy</a>
+                </div>
+            </div>
+            <div class="row">
+                <div class="twelve columns label">Indication</div>
+                <div class="twelve columns">
+                    <a id="DEVICE_STRATEGY">LVAD </a>
+                </div>
+            </div>
+            <div class="row">
+                <div class="twelve columns label">Transplant</div>
+                <div class="twelve columns">
+                    <a>Listable</a>
+                </div>
+            </div>
+            <div class="row">
+                <div class="twelve columns label">Insurance</div>
+                <div class="twelve columns">
+                    <a>Medicare</a>
+                </div>
+            </div>
+            <div class="row">
+                <div class="twelve columns label">Psyco-social</div>
+                <div class="twelve columns">
+                    <a>Approved</a>
+                </div>
+            </div>
+        </div>
+
+        <a class="session-label label-top-space">PFT, EKG and Others</a>
+        <div class="one-col-table">
+            <table class="case-sheet-table">
+                <tbody>
+                    <tr>
+                        <td>FEV1</td>
+                        <td>2.16</td>
+                    </tr>
+                    <tr>
+                        <td>DLCO</td>
+                        <td>58</td>
+                    </tr>
+                    <!-- EKG -->
+                    <tr>
+                        <td>QRS</td>
+                        <td>168</td>
+                    </tr>
+                </tbody>
+            </table>
+            <!-- Others -->
+            <table class="case-sheet-table">
+                <tbody>
+                    <tr></tr>
+                    <tr>
+                        <td>ABI</td>
+                        <td id='walk'>Walk</td>
+                        <td>CT Scan</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+
+        <!-- prediction -->
+        <!-- <div class="square">
+            <p class="session-label">Projection</p>
+            <div class="table-grid row">
+                <div class="four columns ">
+                    <a>1-yr survival</a>
+                </div>
+                <div class="two columns ">
+                    <a>Med</a>
+                </div>
+                <div class="two columns ">
+                    <a>72%</a>
+                </div>
+                <h7>Seattle Risk Model</h7>
+            </div>
+            <div class="table-grid row">
+                <div class="four columns ">
+                    <a>1-yr survival</a>
+                </div>
+                <div class="two columns ">
+                    <a>VAD</a>
+                </div>
+                <div class="two columns ">
+                    <a>72%</a>
+                </div>
+                <h7>CORA</h7>
+            </div>
+        </div> -->
+    </div>
+    <!-- 2ND COLUMN -->
+    <div class="four columns">
+
+        <a class="session-label">History</a>
+
+        <div id="svgcontainer">
+            <div id="timeline2_combine"></div>
+        </div>
+
+
+        <table class="case-sheet-table">
+            <tbody>
+                <tr>
+                    <td>
+                        <a style="color:#1f77b4">&#9679;</a>
+                        <h7>1</h7>
+                    </td>
+                    <td id="testtest">STEMI</td>
+                    <td>02/2012</td>
+                </tr>
+                <tr>
+                    <td>
+                        <a style="color:#1f77b4">&#9679;</a>
+                        <h7>2</h7>
+                    </td>
+                    <td>HFeEF Dx</td>
+                    <td>03/2012</td>
+                </tr>
+                <tr>
+                    <td>
+                        <a style="color:#1f77b4">&#9679;</a>
+                        <h7>3</h7>
+                    </td>
+                    <td id='NYHA'></td>
+                    <td>06/2012 ICD</td>
+                </tr>
+                <tr>
+                    <td>
+                    </td>
+                    <td>First HF Adm</td>
+                    <td>10/2014</td>
+                </tr>
+                <tr>
+                    <td>
+                        <a style="color:#1f77b4">&#9679;</a>
+                        <h7>4</h7>
+                    </td>
+                    <td>Initiate PCS</td>
+                    <td>11/2016</td>
+                </tr>
+                <tr>
+                    <td>
+                        <a style="color:#1f77b4">&#9679;</a>
+                        <h7>5</h7>
+                    </td>
+                    <td>Referred for MCS</td>
+                    <td>02/2017</td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td>Prev Cardiac Oper</td>
+                    <td id="PREV_CARDIAC_OPER"></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <a class="session-label label-top-space">Labs</a>
+        <div class="two-col-table">
+            <table class="case-sheet-table">
+                <tbody>
+                    <tr>
+                        <td>HGB</td>
+                        <td id="HGB"></td>
+                    </tr>
+                    <tr>
+                        <td>WBC</td>
+                        <td id="WBC"></td>
+                    </tr>
+                    <tr>
+                        <td>PLT</td>
+                        <td>193</td>
+                    </tr>
+                    <tr>
+                        <td>INR</td>
+                        <td id='INR'></td>
+                    </tr>
+                    <tr>
+                        <td>CREAT</td>
+                        <td id='CREAT_UMOL_L'></td>
+                    </tr>
+                    <tr>
+                        <td>HGBA1C</td>
+                        <td>5.2</td>
+                    </tr>
+                    <tr>
+                        <td>SGPT</td>
+                        <td id='SGPT'>12</td>
+                    </tr>
+                    <tr>
+                        <td>SGOT</td>
+                        <td id='SGOT'>23</td>
+                    </tr>
+                    <tr>
+                        <td>ALB</td>
+                        <td id = 'ALBUMIN_G_L'></td>
+                    </tr>
+                    <tr>
+                        <td>PALB</td>
+                        <td>16.0</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="four columns">
+        <a class="session-label">ECHO</a>
+        <div class="one-col-table">
+            <table class="case-sheet-table">
+                <tbody>
+                    <tr>
+                        <td>LV size</td>
+                        <td>8.3</td>
+                    </tr>
+                    <tr>
+                        <td>LVEF</td>
+                        <td id="LVEF"></td>
+                    </tr>
+                    <tr>
+                        <td>RT Ventricular Func</td>
+                        <td>n/a</td>
+                    </tr>
+                    <tr>
+                        <td>PAP</td>
+                        <td>n/a</td>
+                    </tr>
+                    <tr>
+                        <td>MV Insufficiency</td>
+                        <td>Moderate Severe [3+] 47-64%</td>
+                    </tr>
+                    <tr>
+                        <td>TV Insufficiency</td>
+                        <td>Moderate [2+] 25-46%</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <a class="session-label label-top-space">CARDCATH</a>
+        <div class="two-col-table">
+            <table class="case-sheet-table">
+                <tbody>
+                    <tr>
+                        <td>Subtype</td>
+                        <td>right</td>
+                    </tr>
+                    <tr>
+                        <td>Mean RA</td>
+                        <td>12</td>
+                    </tr>
+                    <tr>
+                        <td>PAP</td>
+                        <td>73/34</td>
+                    </tr>
+                    <tr>
+                        <td>Mean PAP</td>
+                        <td>51</td>
+                    </tr>
+                    <tr>
+                        <td>Mean PCWP</td>
+                        <td>33</td>
+                    </tr>
+                    <tr>
+                        <td>TPG</td>
+                        <td>18</td>
+                    </tr>
+                </tbody>
+            </table>
+            <table class="case-sheet-table">
+                <tbody>
+                    <tr>
+                        <td>PVR</td>
+                        <td>305</td>
+                    </tr>
+                    <tr>
+                        <td>CO</td>
+                        <td>5.25</td>
+                    </tr>
+                    <tr>
+                        <td>CI</td>
+                        <td>2.18</td>
+                    </tr>
+                    <tr>
+                        <td>MVO2</td>
+                        <td>n/a</td>
+                    </tr>
+                    <tr>
+                        <td>SVO2</td>
+                        <td>42</td>
+                    </tr>
+                    <tr>
+                        <td style="color:white">placeholder</td>
+                        <td style="color:white">placeholder</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="btn case-sheet-action-btn label-top-space" id="mod-test">
+            test
+        </div>
+    </div>
+</div>
