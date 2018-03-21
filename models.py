@@ -425,4 +425,172 @@ class ensembleTree(model):
         eng = matlab.engine.start_matlab()
         partitionedModel = eng.crossval(trainedClassifier.ClassificationEnsemble, 'KFold', 5);
 
+def inference(data):
 
+    with tf.variable_scope('conv1') as scope:
+        weights = tf.get_variable('weights', 
+                                  shape = [3, 3, 3, 663],
+                                  dtype = tf.float32, 
+                                  initializer=tf.truncated_normal_initializer(stddev=0.05,dtype=tf.float32)) 
+        biases = tf.get_variable('biases', 
+                                 shape=[663],
+                                 dtype=tf.float32, 
+                                 initializer=tf.constant_initializer(0.0))
+        conv = tf.nn.conv2d(data, weights, strides=[1,1,1,1], padding='SAME')
+        pre_activation = tf.nn.bias_add(conv, biases)
+        conv1 = tf.nn.relu(pre_activation, name= scope.name)
+    
+    
+    #pool1 and norm1   
+    with tf.variable_scope('pooling1_lrn') as scope:
+        pool1 = tf.nn.max_pool(conv1, ksize=[1,3,3,1],strides=[1,2,2,1],
+                               padding='SAME', name='pooling1')
+        norm1 = tf.nn.lrn(pool1, depth_radius=4, bias=1.0, alpha=0.001/9.0,
+                          beta=0.75, name='norm1')
+    
+    
+    #conv2
+    with tf.variable_scope('conv2') as scope:
+        weights = tf.get_variable('weights',
+                                  shape=[3,3,663, 64],
+                                  dtype=tf.float32,
+                                  initializer=tf.truncated_normal_initializer(stddev=0.05,dtype=tf.float32))
+        biases = tf.get_variable('biases',
+                                 shape=[64], 
+                                 dtype=tf.float32,
+                                 initializer=tf.constant_initializer(0.1))
+        conv = tf.nn.conv2d(norm1, weights, strides=[1,1,1,1],padding='SAME')
+        pre_activation = tf.nn.bias_add(conv, biases)
+        conv2 = tf.nn.relu(pre_activation, name='conv2')
+    
+    
+    #pool2 and norm2
+    with tf.variable_scope('pooling2_lrn') as scope:
+        norm2 = tf.nn.lrn(conv2, depth_radius=4, bias=1.0, alpha=0.001/9.0,
+                          beta=0.75,name='norm2')
+        pool2 = tf.nn.max_pool(norm2, ksize=[1,3,3,1], strides=[1,1,1,1],
+                               padding='SAME',name='pooling2')
+        
+    conv3
+    with tf.variable_scope('conv3') as scope:
+        weights = tf.get_variable('weights',
+                                  shape=[3,3,663, 64],
+                                  dtype=tf.float32,
+                                  initializer=tf.truncated_normal_initializer(stddev=0.05,dtype=tf.float32))
+        biases = tf.get_variable('biases',
+                                 shape=[64], 
+                                 dtype=tf.float32,
+                                 initializer=tf.constant_initializer(0.1))
+        conv = tf.nn.conv2d(norm1, weights, strides=[1,1,1,1],padding='SAME')
+        pre_activation = tf.nn.bias_add(conv, biases)
+        conv3 = tf.nn.relu(pre_activation, name='conv3')
+          
+
+    #pool3 and norm3
+    with tf.variable_scope('pooling3_lrn') as scope:
+        norm3 = tf.nn.lrn(conv3, depth_radius=4, bias=1.0, alpha=0.001/9.0,
+                          beta=0.75,name='norm2')
+        pool3 = tf.nn.max_pool(norm3, ksize=[1,3,3,1], strides=[1,1,1,1],
+                               padding='SAME',name='pooling3')
+    
+    
+    #local3
+    with tf.variable_scope('local3') as scope:
+        reshape = tf.reshape(pool2, shape=[BATCH_SIZE, -1])
+        dim = reshape.get_shape()[1].value
+        weights = tf.get_variable('weights',
+                                  shape=[dim,384],
+                                  dtype=tf.float32,
+                                  initializer=tf.truncated_normal_initializer(stddev=0.004,dtype=tf.float32))
+        biases = tf.get_variable('biases',
+                                 shape=[384],
+                                 dtype=tf.float32, 
+                                 initializer=tf.constant_initializer(0.1))
+        local3 = tf.nn.relu(tf.matmul(reshape, weights) + biases, name=scope.name)
+    
+     
+    #local4
+    with tf.variable_scope('local4') as scope:
+        weights = tf.get_variable('weights',
+                                  shape=[384,192],
+                                  dtype=tf.float32, 
+                                  initializer=tf.truncated_normal_initializer(stddev=0.004,dtype=tf.float32))
+        biases = tf.get_variable('biases',
+                                 shape=[192],
+                                 dtype=tf.float32,
+                                 initializer=tf.constant_initializer(0.1))
+        local4 = tf.nn.relu(tf.matmul(local3, weights) + biases, name='local4')
+     
+        
+   
+    with tf.variable_scope('softmax_linear') as scope:
+        weights = tf.get_variable('softmax_linear',
+                                  shape=[192, 10],
+                                  dtype=tf.float32,
+                                  initializer=tf.truncated_normal_initializer(stddev=0.004,dtype=tf.float32))
+        biases = tf.get_variable('biases', 
+                                 shape=[10],
+                                 dtype=tf.float32, 
+                                 initializer=tf.constant_initializer(0.1))
+        softmax_linear = tf.add(tf.matmul(local4, weights), biases, name='softmax_linear')
+    
+    return softmax_linear
+    
+def trainNet():
+    
+    my_global_step = tf.Variable(0, name='global_step', trainable=False)
+    
+    
+    data_dir = '/Users/Desktop/Resarch2018/InterMacs_data/180301/'
+    log_dir = '/Users/Desktop/Research2018/InterMacs_data'
+    
+    data, labels = cifar10_input.read_cifar10(data_dir=data_dir,
+                                                is_train=True,
+                                                batch_size= BATCH_SIZE,
+                                                shuffle=True)
+    logits = inference(data)
+    
+    loss = losses(logits, labels)
+    
+    
+    optimizer = tf.train.GradientDescentOptimizer(learning_rate)
+    train_op = optimizer.minimize(loss, global_step= my_global_step)
+    
+    saver = tf.train.Saver(tf.global_variables())
+    summary_op = tf.summary.merge_all()
+    
+    
+    
+    init = tf.global_variables_initializer()
+    sess = tf.Session()
+    sess.run(init)
+    
+    coord = tf.train.Coordinator()
+    threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+    
+    summary_writer = tf.summary.FileWriter(log_dir, sess.graph)
+    
+    try:
+        for step in np.arange(MAX_STEP):
+            if coord.should_stop():
+                    break
+            _, loss_value = sess.run([train_op, loss])
+               
+            if step % 50 == 0:                 
+                print ('Step: %d, loss: %.4f' % (step, loss_value))
+                
+            if step % 100 == 0:
+                summary_str = sess.run(summary_op)
+                summary_writer.add_summary(summary_str, step)                
+    
+            if step % 2000 == 0 or (step + 1) == MAX_STEP:
+                checkpoint_path = os.path.join(log_dir, 'model.ckpt')
+                saver.save(sess, checkpoint_path, global_step=step)
+                
+    except tf.errors.OutOfRangeError:
+        print('Done training -- epoch limit reached')
+    finally:
+        coord.request_stop()
+        
+    coord.join(threads)
+    sess.close()
