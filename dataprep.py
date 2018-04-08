@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import csv
 import functools
+import regex as re
 
 # combine device, patient, and followup csvs into one
 # and then separate pre- and post-implant variables
@@ -30,39 +31,60 @@ nyha_dict = {
     'Unknown': '-',
 }
 
-num_card_hosp_dict = {'0-1': 0, '2-3': 2, '4 or more': 4, '-': np.nan, }
+num_card_hosp_dict = {'0-1': 0, '2-3': 2, '4 or more': 4, '-':  None }
 
 time_card_dgn_dict = {
     '< 1 month': 0,
     '1 month - 1 year': 1,
     '1-2 years': 12,
     '> 2 years': 24,
-    '-': np.nan,
+    '-': None,
 }
 
 
 def feature_dict():
     """
-    imports INTERMACS Data Dictionary with Format Value tables into one dict
-    @returns:
+    imports INTERMACS Data Dictionary with Format Value tables into one dictionary
+    :returns:
     - a dictionary that combines all three data dictinoaries
-    - pcols: patient table columns
-    - dplus (list): device table columns that's not in patient table
-    - fplus: followup talbe collumns that are not in patient OR device OR events table
     """
 
     # import data dictionary csv as dict
-    # returns {'VARIABLE': {'TABLE': csv_name, 'TYPE': ..., 'FORMAT_VALUE', ....}}
-    p = pd.read_csv('static/data/patient_INTERMACS_Data_Dictionary.csv',
+    # :return: {'VARIABLE': {'TABLE': csv_name, 'TYPE': ..., 'FORMAT_VALUE', ....}}
+
+    p = pd.read_csv('data/patient_INTERMACS_Data_Dictionary.csv',
                     index_col='VARIABLE', encoding="ISO-8859-1", low_memory=False).to_dict(orient='index')
-    d = pd.read_csv('static/data/device_INTERMACS_Data_Dictionary.csv',
+    d = pd.read_csv('data/device_INTERMACS_Data_Dictionary.csv',
                     index_col='VARIABLE', encoding="ISO-8859-1", low_memory=False).to_dict(orient='index')
-    f = pd.read_csv('static/data/followup_INTERMACS_Data_Dictionary.csv',
+    f = pd.read_csv('data/followup_INTERMACS_Data_Dictionary.csv',
                     index_col='VARIABLE', encoding="ISO-8859-1", low_memory=False).to_dict(orient='index')
 
-    # print (len(d.keys() | p.keys() | e.keys() | f.keys())) # 1080 columns in total
+    # print (len(d.keys() | p.keys() | e.keys() | f.keys()))
 
-    return {**d, **p, **f}  # 1080 columns in total
+    _dict = {**d, **p, **f}  # all columns 1080 columns in total
+
+    # parse FORMAT_VALUE into dictionary
+    # i.e. transform string ".=Missing; .U=Unknown; 0=No; 1=Yes; 9=Unknown"
+    # to dict {'.': 'Missing'; '.U'= 'Unknown',  0=No; 1=Yes; 9 = 'Unknown'}
+
+    for k, v in _dict.items():
+
+        # if FORMAT_VALUE has value
+        if isinstance(v['FORMAT_VALUE'], str):
+
+            # transform string to list of tuples
+            _v = [tuple(item.split('=')) for item in v['FORMAT_VALUE'].split('; ')]
+            
+            # print(dict(re.findall(r'([^ ]*?)=([a-zA-Z\s]+)[^;]*?', v['FORMAT_VALUE'])))
+            
+            # re.findall 
+            v['FORMAT_VALUE'] = dict(_v)
+
+            # print(k)
+            # print(_dict[k]['FORMAT_VALUE'])
+
+
+    return _dict
 
 
 def import_and_join(feature_dict):
@@ -71,16 +93,17 @@ def import_and_join(feature_dict):
     """
     # load csvs
     # leave only pre-implant rows in follow-up data
-    pdf = pd.read_csv('static/data/patientnewdata.csv',
-    na_values = ['Missing', '.', '.U', '998'],
+    pdf = pd.read_csv('data/patientnewdata.csv',
+    na_values = ['nan'],
     low_memory = False,
     encoding="ISO-8859-1")  # 456 cols 17075 rows (patients)
-    ddf = pd.read_csv('static/data/devicenewdata.csv',
-    na_values = ['Missing', '.', '.U', '998'],
+    ddf = pd.read_csv('data/devicenewdata.csv',
+    na_values = ['nan'],
     low_memory = False,
     encoding = "ISO-8859-1")  # 19207 rows (implants)
-    fdf = pd.read_csv('static/data/followupnewdata.csv',
-                      na_values=['Missing', '.', '.U', '998'], encoding="ISO-8859-1")
+    fdf = pd.read_csv('data/followupnewdata.csv', 
+                      na_values=['nan'],
+                      low_memory=False, encoding="ISO-8859-1")
     fdf = fdf.loc[fdf['FORM_ID'] == 'Pre-Implant']  # 19207 rows (implants)
 
     # merge device and followup tables
@@ -321,22 +344,25 @@ def import_and_join(feature_dict):
     """
     export the whole df, preimplant and outcome dfs to respective csvs
     """
-    df.to_csv('static/data/03-14-2018-all.csv', encoding='utf-8')
+    df.to_csv('data/03-14-2018-all.csv', encoding='utf-8')
     # excludes PATIENT_ID and FORM_ID
-    df[outcome_col + ['OPER_ID']].to_csv('static/data/03-14-2018-post.csv', encoding='utf-8')
+    df[outcome_col + ['OPER_ID']].to_csv('data/03-14-2018-post.csv', encoding='utf-8')
     # excludes PATIENT_ID and FORM_ID
-    df[input_col + ['OPER_ID']].to_csv('static/data/03-14-2018-pre.csv', encoding='utf-8')
+    df[input_col + ['OPER_ID']].to_csv('data/03-14-2018-pre.csv', encoding='utf-8')
 
     """
     prepare data for modeling by combine input cols and label 'INT_DEAD'
     """
     traintest = df[input_col + ['INT_DEAD']]
-    traintest.to_csv('static/data/03-14-2018-traintest.csv', encoding='utf-8')
-    print('Curated %d feature columns and %d rows.' %(len(input_col),len(df))) #532 col 5821 rows
+    traintest.to_csv('data/03-14-2018-traintest.csv', encoding='utf-8')
+    print('Integrated and imported %d input columns, %d output columns and %d observations.' %(len(input_col),len(outcome_col),len(df))) #532 col 5821 rows
 
-    return traintest
+    # take all columns of df as object (str) columns at the moment
+    df[df.columns] = df[df.columns].astype(str) 
 
-feature_dict = feature_dict()
-df = import_and_join(feature_dict)
+    return df, input_col, outcome_col, idx_col
+
+# feature_dict = feature_dict()
+#df = import_and_join(feature_dict)
 
 
