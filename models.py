@@ -12,7 +12,9 @@ from sklearn.model_selection import cross_val_score
 from sklearn.metrics import roc_auc_score
 import pandas as pd
 import numpy as np
-from numpy import genfromtxt
+import math
+import random as rand 
+from point import Point
 import matlab.engine 
 import tensorflow as tf 
 from collections import Counter
@@ -36,7 +38,7 @@ model.predict(v): pass in a 1xn array and return prediction value
 
 """
 
-
+#1 
 
 
 # ========== PRE-PROCESSING ========== #
@@ -289,18 +291,18 @@ class dt(model):
             return np.array([-1,dataY[0],np.nan,np.nan])
         if np.all(dataX[:]==dataX[0]): 
             return np.array([-1,dataX[0],np.nan,np.nan])
-        """
-        Calc the index of the best feature.
-        """
+        
+        #Calc the index of the best feature.
+        
         index = 0;
         cor_list = [];
         for i in range(len(dataX[0])):
             cor_list.append(abs(np.corrcoef(dataX[:,i], dataY)[0,1]))
         index = cor_list.index(max(cor_list))
         
-        """
-        End Calc the index of the best feature.
-        """
+       
+        #split the tree by most significant feature.
+        
         leaf= np.array([-1, Counter(dataY).most_common(1)[0][0], np.nan, np.nan])
         split_value=np.medium(dataX[:,index])
         left=dataX[:,index]<=split_value
@@ -310,9 +312,9 @@ class dt(model):
         rdataX=dataX[right,:]
         rdataY=dataY[right]
         if(len(rdataY)==0 or len(ldataX)==0 ): return leaf
-
-        ltree=self.build_tree(ldataX,ldataY)
-        rtree=self.build_tree(rdataX,rdataY)
+        #recursive train left and right node of the tree then merge at the end 
+        ltree=self.train(ldataX,ldataY)
+        rtree=self.train(rdataX,rdataY)
         if ltree.ndim==1:
             root=np.array([index,split_value,1,2])
         else:
@@ -351,29 +353,25 @@ class dt(model):
         return np.array(res)
         
         
-class Bag(model):
+class Bag(dt):
 
-    def __init__(self, X,Y,learner, bags=30,  **kwargs):
-        self.data = X
-        self.target = Y
-        learners = []
-        for i in range(bags):
-            learners.append(learner(**kwargs))
-        self.learners = learners
+    def __init__(self, bags=30,  **kwargs):
+        self.learners =np.zeros(bags)
         self.kwargs = kwargs
         self.bags = bags
         
-    def train(self):
-        
+    def bagtrain(self):
+        #set bags and  do trees 
         num_samples = self.data.shape[0]
-        for learner in self.learners:
+        for i in range(self.bags):
             idx = np.random.choice(num_samples, num_samples)
             bagX = dataX[idx]
             bagY = dataY[idx]
-            learner.addEvidence(bagX, bagY)
+            self.learners a.append(self.train(bagX,bagY))
         
-    def predict(self, points):
-        preds = np.array([learner.predict(points) for learner in self.learners])
+        
+    def bagPredict(self, val):
+        preds = np.array([learner.predict(val) for learner in self.learners])
         return np.mean(preds, axis=0)
 
         
@@ -425,172 +423,259 @@ class ensembleTree(model):
         eng = matlab.engine.start_matlab()
         partitionedModel = eng.crossval(trainedClassifier.ClassificationEnsemble, 'KFold', 5);
 
-def inference(data):
 
-    with tf.variable_scope('conv1') as scope:
-        weights = tf.get_variable('weights', 
-                                  shape = [3, 3, 3, 663],
-                                  dtype = tf.float32, 
-                                  initializer=tf.truncated_normal_initializer(stddev=0.05,dtype=tf.float32)) 
-        biases = tf.get_variable('biases', 
-                                 shape=[663],
-                                 dtype=tf.float32, 
-                                 initializer=tf.constant_initializer(0.0))
-        conv = tf.nn.conv2d(data, weights, strides=[1,1,1,1], padding='SAME')
-        pre_activation = tf.nn.bias_add(conv, biases)
-        conv1 = tf.nn.relu(pre_activation, name= scope.name)
+
+class clustering(model):
+    def __init__(self, geo_locs_, k_):
+        self.geo_locations = geo_locs_
+        self.k = k_
+        self.clusters = []  #clusters of nodes
+        self.means = []     #means of clusters
+        self.debug = False  #debug flag
+    #this method returns the next random node
+    def next_random(self, index, points, clusters):
+        #pick next node that has the maximum distance from other nodes
+        dist = {}
+        for point_1 in points:
+            for cluster in clusters.values():
+                point_2 = cluster[0]
+                if point_1 not in dist:
+                    dist[point_1] = math.sqrt(math.pow(point_1.latit - point_2.latit,2.0) + math.pow(point_1.longit - point_2.longit,2.0))       
+                else:
+                    dist[point_1] += math.sqrt(math.pow(point_1.latit - point_2.latit,2.0) + math.pow(point_1.longit - point_2.longit,2.0))
+       
+        # return the point that has the maximum distance from previous nodes
+        count_ = 0
+        max_ = 0
+        for key, value in dist.items():
+            if count_ == 0:
+                max_ = value
+                max_point = key
+                count_ += 1
+            else:
+                if value > max_:
+                    max_ = value
+                    max_point = key
+        return max_point
+    #this method computes the initial means
+    def initial_means(self, points):
+        #pick the first node at random
+        point_ = rand.choice(points)
+        clusters = dict()
+        clusters.setdefault(0, []).append(point_)
+        points.remove(point_)
+        #now let's pick k-1 more random points
+        for i in range(1, self.k):
+            point_ = self.next_random(i, points, clusters)
+            #clusters.append([point_])
+            clusters.setdefault(i, []).append(point_)
+            points.remove(point_)
+        #compute mean of clusters
+        #self.print_clusters(clusters)
+        self.means = self.compute_mean(clusters)
+  
+    def compute_mean(self, clusters):
+        means = []
+        for cluster in clusters.values():
+            mean_point = Point(0.0, 0.0)
+            cnt = 0.0
+            for point in cluster:
+                #print "compute: point(%f,%f)" % (point.latit, point.longit)
+                mean_point.latit += point.latit
+                mean_point.longit += point.longit
+                cnt += 1.0
+            mean_point.latit = mean_point.latit/cnt
+            mean_point.longit = mean_point.longit/cnt
+            means.append(mean_point)
+        return means
+    #this method assign nodes to the cluster with the smallest mean
+    def assign_points(self, points):
     
-    
-    #pool1 and norm1   
-    with tf.variable_scope('pooling1_lrn') as scope:
-        pool1 = tf.nn.max_pool(conv1, ksize=[1,3,3,1],strides=[1,2,2,1],
-                               padding='SAME', name='pooling1')
-        norm1 = tf.nn.lrn(pool1, depth_radius=4, bias=1.0, alpha=0.001/9.0,
-                          beta=0.75, name='norm1')
-    
-    
-    #conv2
-    with tf.variable_scope('conv2') as scope:
-        weights = tf.get_variable('weights',
-                                  shape=[3,3,663, 64],
-                                  dtype=tf.float32,
-                                  initializer=tf.truncated_normal_initializer(stddev=0.05,dtype=tf.float32))
-        biases = tf.get_variable('biases',
-                                 shape=[64], 
-                                 dtype=tf.float32,
-                                 initializer=tf.constant_initializer(0.1))
-        conv = tf.nn.conv2d(norm1, weights, strides=[1,1,1,1],padding='SAME')
-        pre_activation = tf.nn.bias_add(conv, biases)
-        conv2 = tf.nn.relu(pre_activation, name='conv2')
-    
-    
-    #pool2 and norm2
-    with tf.variable_scope('pooling2_lrn') as scope:
-        norm2 = tf.nn.lrn(conv2, depth_radius=4, bias=1.0, alpha=0.001/9.0,
-                          beta=0.75,name='norm2')
-        pool2 = tf.nn.max_pool(norm2, ksize=[1,3,3,1], strides=[1,1,1,1],
-                               padding='SAME',name='pooling2')
-        
-    conv3
-    with tf.variable_scope('conv3') as scope:
-        weights = tf.get_variable('weights',
-                                  shape=[3,3,663, 64],
-                                  dtype=tf.float32,
-                                  initializer=tf.truncated_normal_initializer(stddev=0.05,dtype=tf.float32))
-        biases = tf.get_variable('biases',
-                                 shape=[64], 
-                                 dtype=tf.float32,
-                                 initializer=tf.constant_initializer(0.1))
-        conv = tf.nn.conv2d(norm1, weights, strides=[1,1,1,1],padding='SAME')
-        pre_activation = tf.nn.bias_add(conv, biases)
-        conv3 = tf.nn.relu(pre_activation, name='conv3')
+        clusters = dict()
+        for point in points:
+            dist = []
           
+            #find the best cluster for this node
+            for mean in self.means:
+                dist.append(math.sqrt(math.pow(point.latit - mean.latit,2.0) + math.pow(point.longit - mean.longit,2.0)))
+            cnt_ = 0
+            index = 0
+            min_ = dist[0]
+            for d in dist:
+                if d < min_:
+                    min_ = d
+                    index = cnt_
+                cnt_ += 1
+  
+            clusters.setdefault(index, []).append(point)
+        return clusters
+    def update_means(self, means, threshold):
+        #check the current mean with the previous one to see if we should stop
+        for i in range(len(self.means)):
+            mean_1 = self.means[i]
+            mean_2 = means[i]      
+            if math.sqrt(math.pow(mean_1.latit - mean_2.latit,2.0) + math.pow(mean_1.longit - mean_2.longit,2.0)) > threshold:
+                return False
+        return True
 
-    #pool3 and norm3
-    with tf.variable_scope('pooling3_lrn') as scope:
-        norm3 = tf.nn.lrn(conv3, depth_radius=4, bias=1.0, alpha=0.001/9.0,
-                          beta=0.75,name='norm2')
-        pool3 = tf.nn.max_pool(norm3, ksize=[1,3,3,1], strides=[1,1,1,1],
-                               padding='SAME',name='pooling3')
-    
-    
-    #local3
-    with tf.variable_scope('local3') as scope:
-        reshape = tf.reshape(pool2, shape=[BATCH_SIZE, -1])
-        dim = reshape.get_shape()[1].value
-        weights = tf.get_variable('weights',
-                                  shape=[dim,384],
-                                  dtype=tf.float32,
-                                  initializer=tf.truncated_normal_initializer(stddev=0.004,dtype=tf.float32))
-        biases = tf.get_variable('biases',
-                                 shape=[384],
-                                 dtype=tf.float32, 
-                                 initializer=tf.constant_initializer(0.1))
-        local3 = tf.nn.relu(tf.matmul(reshape, weights) + biases, name=scope.name)
-    
-     
-    #local4
-    with tf.variable_scope('local4') as scope:
-        weights = tf.get_variable('weights',
-                                  shape=[384,192],
-                                  dtype=tf.float32, 
-                                  initializer=tf.truncated_normal_initializer(stddev=0.004,dtype=tf.float32))
-        biases = tf.get_variable('biases',
-                                 shape=[192],
-                                 dtype=tf.float32,
-                                 initializer=tf.constant_initializer(0.1))
-        local4 = tf.nn.relu(tf.matmul(local3, weights) + biases, name='local4')
-     
+    def k_means(self, plot_flag):
+        if len(self.geo_locations) < self.k:
+            return -1   #error
+        points_ = [point for point in self.geo_locations]
+        #compute the initial means
+        self.initial_means(points_)
+        stop = False
+        while not stop:
+            #assignment step: assign each node to the cluster with the closest mean
+            points_ = [point for point in self.geo_locations]
+            clusters = self.assign_points(points_)
+            if self.debug:
+                self.print_clusters(clusters)
+            means = self.compute_mean(clusters)
+            
+        self.clusters = clusters
+       
+        return 0
+
+class deepLearn(model): #then use deep learning to train each clusters 
+    def inference(self):
+        #first convolutinary layer 
+        with tf.variable_scope('conv1') as scope:
+            weights = tf.get_variable('weights', 
+                                      shape = [3, 3, 3, 663],
+                                      dtype = tf.float32, 
+                                      initializer=tf.truncated_normal_initializer(stddev=0.05,dtype=tf.float32)) 
+            biases = tf.get_variable('biases', 
+                                     shape=[663],
+                                     dtype=tf.float32, 
+                                     initializer=tf.constant_initializer(0.0))
+            conv = tf.nn.conv2d(data, weights, strides=[1,1,1,1], padding='SAME')
+            pre_activation = tf.nn.bias_add(conv, biases)
+            conv1 = tf.nn.relu(pre_activation, name= scope.name)
         
-   
-    with tf.variable_scope('softmax_linear') as scope:
-        weights = tf.get_variable('softmax_linear',
-                                  shape=[192, 10],
-                                  dtype=tf.float32,
-                                  initializer=tf.truncated_normal_initializer(stddev=0.004,dtype=tf.float32))
-        biases = tf.get_variable('biases', 
-                                 shape=[10],
-                                 dtype=tf.float32, 
-                                 initializer=tf.constant_initializer(0.1))
-        softmax_linear = tf.add(tf.matmul(local4, weights), biases, name='softmax_linear')
+        
+        #pooling layer 1 and normalization 1   
+        with tf.variable_scope('pooling1_lrn') as scope:
+            pool1 = tf.nn.max_pool(conv1, ksize=[1,3,3,1],strides=[1,2,2,1],
+                                   padding='SAME', name='pooling1')
+            norm1 = tf.nn.lrn(pool1, depth_radius=4, bias=1.0, alpha=0.001/9.0,
+                              beta=0.75, name='norm1')
+        
+        
+        #conv2
+        with tf.variable_scope('conv2') as scope:
+            weights = tf.get_variable('weights',
+                                      shape=[3,3,663, 64],
+                                      dtype=tf.float32,
+                                      initializer=tf.truncated_normal_initializer(stddev=0.05,dtype=tf.float32))
+            biases = tf.get_variable('biases',
+                                     shape=[64], 
+                                     dtype=tf.float32,
+                                     initializer=tf.constant_initializer(0.1))
+            conv = tf.nn.conv2d(norm1, weights, strides=[1,1,1,1],padding='SAME')
+            pre_activation = tf.nn.bias_add(conv, biases)
+            conv2 = tf.nn.relu(pre_activation, name='conv2')
+        
+        
+        #pool2 and norm2
+        with tf.variable_scope('pooling2_lrn') as scope:
+            norm2 = tf.nn.lrn(conv2, depth_radius=4, bias=1.0, alpha=0.001/9.0,
+                              beta=0.75,name='norm2')
+            pool2 = tf.nn.max_pool(norm2, ksize=[1,3,3,1], strides=[1,1,1,1],
+                                   padding='SAME',name='pooling2')
+            
+           #conv 3
+        with tf.variable_scope('conv3') as scope:
+            weights = tf.get_variable('weights',
+                                      shape=[3,3,663, 64],
+                                      dtype=tf.float32,
+                                      initializer=tf.truncated_normal_initializer(stddev=0.05,dtype=tf.float32))
+            biases = tf.get_variable('biases',
+                                     shape=[64], 
+                                     dtype=tf.float32,
+                                     initializer=tf.constant_initializer(0.1))
+            conv = tf.nn.conv2d(norm1, weights, strides=[1,1,1,1],padding='SAME')
+            pre_activation = tf.nn.bias_add(conv, biases)
+            conv3 = tf.nn.relu(pre_activation, name='conv3')
+              
     
-    return softmax_linear
-    
-def trainNet():
-    
-    my_global_step = tf.Variable(0, name='global_step', trainable=False)
-    
-    
-    data_dir = '/Users/Desktop/Resarch2018/InterMacs_data/180301/'
-    log_dir = '/Users/Desktop/Research2018/InterMacs_data'
-    
-    data, labels = cifar10_input.read_cifar10(data_dir=data_dir,
-                                                is_train=True,
-                                                batch_size= BATCH_SIZE,
-                                                shuffle=True)
-    logits = inference(data)
-    
-    loss = losses(logits, labels)
-    
-    
-    optimizer = tf.train.GradientDescentOptimizer(learning_rate)
-    train_op = optimizer.minimize(loss, global_step= my_global_step)
-    
-    saver = tf.train.Saver(tf.global_variables())
-    summary_op = tf.summary.merge_all()
-    
-    
-    
-    init = tf.global_variables_initializer()
-    sess = tf.Session()
-    sess.run(init)
-    
-    coord = tf.train.Coordinator()
-    threads = tf.train.start_queue_runners(sess=sess, coord=coord)
-    
-    summary_writer = tf.summary.FileWriter(log_dir, sess.graph)
-    
-    try:
-        for step in np.arange(MAX_STEP):
-            if coord.should_stop():
+        #pool3 and norm3
+        with tf.variable_scope('pooling3_lrn') as scope:
+            norm3 = tf.nn.lrn(conv3, depth_radius=4, bias=1.0, alpha=0.001/9.0,
+                              beta=0.75,name='norm2')
+            pool3 = tf.nn.max_pool(norm3, ksize=[1,3,3,1], strides=[1,1,1,1],
+                                   padding='SAME',name='pooling3')
+        
+        #local3
+        with tf.variable_scope('local3') as scope:
+            reshape = tf.reshape(pool2, shape=[BATCH_SIZE, -1])
+            dim = reshape.get_shape()[1].value
+            weights = tf.get_variable('weights',
+                                      shape=[dim,384],
+                                      dtype=tf.float32,
+                                      initializer=tf.truncated_normal_initializer(stddev=0.004,dtype=tf.float32))
+            biases = tf.get_variable('biases',
+                                     shape=[384],
+                                     dtype=tf.float32, 
+                                     initializer=tf.constant_initializer(0.1))
+            local3 = tf.nn.relu(tf.matmul(reshape, weights) + biases, name=scope.name)
+        
+         
+        #local4
+        with tf.variable_scope('local4') as scope:
+            weights = tf.get_variable('weights',
+                                      shape=[384,192],
+                                      dtype=tf.float32, 
+                                      initializer=tf.truncated_normal_initializer(stddev=0.004,dtype=tf.float32))
+            biases = tf.get_variable('biases',
+                                     shape=[192],
+                                     dtype=tf.float32,
+                                     initializer=tf.constant_initializer(0.1))
+            local4 = tf.nn.relu(tf.matmul(local3, weights) + biases, name='local4')
+         
+            
+        #fully conected layer 
+        with tf.variable_scope('softmax_linear') as scope:
+            weights = tf.get_variable('softmax_linear',
+                                      shape=[192, 10],
+                                      dtype=tf.float32,
+                                      initializer=tf.truncated_normal_initializer(stddev=0.004,dtype=tf.float32))
+            biases = tf.get_variable('biases', 
+                                     shape=[10],
+                                     dtype=tf.float32, 
+                                     initializer=tf.constant_initializer(0.1))
+            softmax_linear = tf.add(tf.matmul(local4, weights), biases, name='softmax_linear')
+        
+        return softmax_linear
+        
+    def train(self):
+        my_global_step = tf.Variable(0, name='global_step', trainable=False)
+        data, labels = self.data ,self.target
+        logits = inference(data)
+        loss = losses(logits, labels)
+        optimizer = tf.train.AdaOptimizer(2)
+        train_op = optimizer.minimize(loss, global_step= my_global_step)
+        saver = tf.train.Saver(tf.global_variables())
+        summary_op = tf.summary.merge_all()
+        init = tf.global_variables_initializer()
+        sess = tf.Session()
+        sess.run(init)
+        coord = tf.train.Coordinator()
+        threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+        summary_writer = tf.summary.FileWriter(log_dir, sess.graph)
+        try:
+            for step in np.arange(MAX_STEP):
+                if coord.should_stop():
                     break
-            _, loss_value = sess.run([train_op, loss])
-               
-            if step % 50 == 0:                 
-                print ('Step: %d, loss: %.4f' % (step, loss_value))
-                
-            if step % 100 == 0:
-                summary_str = sess.run(summary_op)
-                summary_writer.add_summary(summary_str, step)                
-    
-            if step % 2000 == 0 or (step + 1) == MAX_STEP:
+            _,loss_value = sess.run([train_op, loss])
+            if step %1000 == 0 or (step + 1) == MAX_STEP:
                 checkpoint_path = os.path.join(log_dir, 'model.ckpt')
                 saver.save(sess, checkpoint_path, global_step=step)
-                
-    except tf.errors.OutOfRangeError:
-        print('Done training -- epoch limit reached')
-    finally:
-        coord.request_stop()
         
-    coord.join(threads)
-    sess.close()
+        
+        finally:
+            coord.request_stop()
+        coord.join(threads)
+        sess.close()
+        
+        
